@@ -1,0 +1,16 @@
+{
+  "name": "agente-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agente de IA no WhatsApp para atender leads de tráfego pago (Elite Car e Givance Tech)",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "bateria": "node test/bateria-real.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "@vercel/functions": "^3.10.3"
+  }
+}
