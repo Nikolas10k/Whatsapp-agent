@@ -7,7 +7,7 @@ import { criarDbMemoria } from '../lib/db-memoria.js';
 import { chamarModelo } from '../lib/llm.js';
 import { negocios } from '../lib/negocios/index.js';
 
-const negocio = negocios[process.argv[2] || 'givance'];
+const negocio = { ...negocios[process.argv[2] || 'givance'], ativo: true };
 if (!process.env.OPENROUTER_API_KEY) { console.error('Defina OPENROUTER_API_KEY'); process.exit(1); }
 
 const CENARIOS = [
@@ -38,11 +38,11 @@ for (const c of CENARIOS) {
   if (c.juntas) {
     let libera; const portao = new Promise((r) => { libera = r; });
     deps.esperar = () => portao;
-    const ps = c.msgs.map((t, i) => receberMensagem({ negocio, phoneNumberId: 'x', contato, nomePerfil: 'Teste', waMessageId: `${n}-${i}`, texto: t }, deps));
+    const ps = c.msgs.map((t, i) => receberMensagem({ negocio, numero: { id: 'x' }, contato, nomePerfil: 'Teste', waMessageId: `${n}-${i}`, texto: t }, deps));
     await new Promise((r) => setImmediate(r)); libera(); await Promise.all(ps);
   } else {
     for (const [i, t] of c.msgs.entries()) {
-      await receberMensagem({ negocio, phoneNumberId: 'x', contato, nomePerfil: 'Teste', waMessageId: `${n}-${i}`, texto: t }, deps);
+      await receberMensagem({ negocio, numero: { id: 'x' }, contato, nomePerfil: 'Teste', waMessageId: `${n}-${i}`, texto: t }, deps);
     }
   }
   const lead = await db.obterLead(negocio.id, contato);

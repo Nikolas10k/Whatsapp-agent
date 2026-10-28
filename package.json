@@ -7,7 +7,9 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "bateria": "node test/bateria-real.js"
+    "bateria": "node test/bateria-real.js",
+    "semear": "node --env-file=.env scripts/semear.js",
+    "conectar": "node --env-file=.env scripts/conectar-numero.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

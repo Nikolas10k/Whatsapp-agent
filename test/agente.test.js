@@ -4,11 +4,12 @@ import { receberMensagem, receberEcoDaEquipe } from '../lib/agente.js';
 import { criarDbMemoria } from '../lib/db-memoria.js';
 import { extrairEventos, processarEventos } from '../lib/webhook.js';
 import { assinaturaValida } from '../lib/whatsapp.js';
+import { cifrar, decifrar } from '../lib/cripto.js';
 import { montarPrompt } from '../lib/prompt.js';
 import givance from '../lib/negocios/givance.js';
 import crypto from 'node:crypto';
 
-const negocio = { ...givance, donoWhatsapp: '5561900000000' };
+const negocio = { ...givance, donoWhatsapp: '5561900000000', ativo: true };
 
 function montar(respostasLlm) {
   const enviados = [], avisos = [], chamadasLlm = [];
@@ -28,7 +29,7 @@ function montar(respostasLlm) {
   };
 }
 
-const msg = (id, texto, extra = {}) => ({ negocio, phoneNumberId: 'PNID', contato: '5561988887777', nomePerfil: 'Ana', waMessageId: id, texto, ...extra });
+const msg = (id, texto, extra = {}) => ({ negocio, numero: { id: 'PNID' }, contato: '5561988887777', nomePerfil: 'Ana', waMessageId: id, texto, ...extra });
 
 test('responde e guarda a memória', async () => {
   const { deps, enviados } = montar([{ content: 'Oi, Ana! Como posso ajudar?' }]);
@@ -111,18 +112,50 @@ test('equipe respondendo pelo app pausa o agente; #bot reativa', async () => {
   assert.equal((await deps.db.obterLead('givance', '5561988887777')).bot_pausado_ate, null);
 });
 
-test('extrai eventos do JSON da Meta e roteia pelo número', async () => {
-  const env = { GIVANCE_PHONE_NUMBER_ID: '111', ELITE_PHONE_NUMBER_ID: '222' };
+test('extrai eventos do JSON da Meta', () => {
   const corpo = { entry: [{ changes: [
     { field: 'messages', value: { metadata: { phone_number_id: '222' }, contacts: [{ wa_id: '55619', profile: { name: 'João' } }],
       messages: [{ id: 'm1', from: '55619', type: 'text', text: { body: 'oi' } }, { id: 'm2', from: '55619', type: 'reaction' }] } },
-    { field: 'messages', value: { metadata: { phone_number_id: '999' }, messages: [{ id: 'm3', from: '1', type: 'text', text: { body: 'x' } }] } },
     { field: 'messages', value: { metadata: { phone_number_id: '111' }, statuses: [{ status: 'read' }] } },
+    { field: 'smb_message_echoes', value: { metadata: { phone_number_id: '222' },
+      message_echoes: [{ id: 'e1', to: '55619', type: 'text', text: { body: 'oi, aqui é a equipe' } }] } },
   ] }] };
-  const ev = extrairEventos(corpo, env);
-  assert.equal(ev.length, 1);
-  assert.equal(ev[0].negocio.id, 'elite-car');
+  const ev = extrairEventos(corpo);
+  assert.deepEqual(ev.map((e) => [e.tipo, e.phoneNumberId]), [['cliente', '222'], ['equipe', '222']]);
   assert.equal(ev[0].nomePerfil, 'João');
+});
+
+test('roteia cada número para o seu negócio, com o token dele', async () => {
+  const elite = { id: 'elite-car', nome: 'Elite Car', nomeAgente: 'Lu', objetivo: 'x', ficha: 'x', ativo: true };
+  const { deps, enviados } = montar([{ content: 'Oi da Elite' }]);
+  deps.db = criarDbMemoria({ contas: [
+    { negocio, numero: { id: '111' } },
+    { negocio: elite, numero: { id: '222', token: 'TOKEN_ELITE' } },
+  ] });
+  const numerosUsados = [];
+  deps.whatsapp.enviarTexto = async (numero, para, texto) => { numerosUsados.push(numero); enviados.push({ para, texto }); };
+  await processarEventos([
+    { tipo: 'cliente', phoneNumberId: '222', contato: '55619', waMessageId: 'm1', texto: 'oi' },
+    { tipo: 'cliente', phoneNumberId: '999', contato: '55618', waMessageId: 'm2', texto: 'número que não é de ninguém' },
+  ], deps);
+  assert.equal(enviados.length, 1);
+  assert.equal(numerosUsados[0].token, 'TOKEN_ELITE');
+  assert.ok(await deps.db.obterLead('elite-car', '55619'));
+});
+
+test('negócio desativado (ex.: assinatura vencida) não responde', async () => {
+  const { deps, enviados } = montar([{ content: 'oi' }]);
+  deps.db = criarDbMemoria({ contas: [{ negocio: { ...negocio, ativo: false }, numero: { id: '111' } }] });
+  await processarEventos([{ tipo: 'cliente', phoneNumberId: '111', contato: '55619', waMessageId: 'm1', texto: 'oi' }], deps);
+  assert.equal(enviados.length, 0);
+});
+
+test('token do cliente é cifrado e volta igual', () => {
+  const env = { TOKEN_KEY: crypto.randomBytes(32).toString('base64') };
+  const cifrado = cifrar('EAAG-token-secreto', env);
+  assert.doesNotMatch(cifrado, /token-secreto/);
+  assert.equal(decifrar(cifrado, env), 'EAAG-token-secreto');
+  assert.throws(() => decifrar(cifrado, { TOKEN_KEY: crypto.randomBytes(32).toString('base64') }));
 });
 
 test('assinatura da Meta', () => {
@@ -143,5 +176,6 @@ test('prompt traz data de hoje e regras anti-golpe', () => {
 test('processarEventos não derruba tudo se um contato falhar', async () => {
   const { deps } = montar([{ content: 'ok' }]);
   deps.db.registrarMensagem = async () => { throw new Error('banco fora'); };
-  await processarEventos([{ tipo: 'cliente', ...msg('w1', 'oi') }], deps); // não lança
+  deps.db.contaPorNumero = async () => ({ negocio, numero: { id: 'PNID' } });
+  await processarEventos([{ tipo: 'cliente', phoneNumberId: 'PNID', ...msg('w1', 'oi') }], deps); // não lança
 });

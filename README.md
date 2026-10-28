@@ -1,6 +1,6 @@
-# Agente de WhatsApp: Elite Car + Givance Tech
+# Agente de WhatsApp (multiempresa)
 
-Um agente só, rodando na Vercel, que atende **os dois números**. Cada número tem a sua ficha de negócio. Foi feito para **leads de tráfego pago**:
+Um agente só, rodando na Vercel, que atende **quantos negócios e números você cadastrar**. Cada número aponta para um negócio no banco, com a sua ficha e o seu token. Os primeiros clientes são a Givance e a Elite Car. Foi feito para **leads de tráfego pago**:
 
 - responde em segundos, 24h por dia;
 - lembra da conversa (últimas 20 mensagens);
@@ -25,9 +25,22 @@ Cliente ──► WhatsApp (Meta) ──► /api/webhook (Vercel) ──► Open
 | `lib/negocios/elite-car.js` | **Ficha da Elite Car**: preencha antes de ligar |
 | `lib/prompt.js` | Personalidade e regras do agente |
 | `lib/agente.js` | Lógica: memória, agrupamento, ferramentas, pausa para humano |
+| `lib/webhook.js` | Lê o JSON da Meta e descobre no banco de qual negócio é cada número |
+| `lib/cripto.js` | Cifra os tokens de WhatsApp dos clientes |
 | `api/webhook.js` | Endpoint que a Meta chama |
-| `supabase/schema.sql` | Tabelas `mensagens` e `leads` |
+| `supabase/schema.sql` | Tabelas `negocios`, `numeros_whatsapp`, `membros`, `mensagens` e `leads` |
+| `scripts/semear.js` | Cadastra no banco os negócios das fichas acima (`npm run semear`) |
+| `scripts/conectar-numero.js` | Liga um número de WhatsApp a um negócio (`npm run conectar`) |
 | `test/` | Testes automáticos + bateria com a IA de verdade |
+
+## Como funciona com vários clientes
+
+- **`negocios`**: um por cliente, com a ficha. `ativo = false` desliga o agente daquele cliente (ex.: assinatura vencida).
+- **`numeros_whatsapp`**: cada `phone_number_id` aponta para um negócio. Se o número é do cliente (WABA dele), o token dele fica aqui, cifrado com `TOKEN_KEY`. Se o número está na WABA da Givance, deixe o token vazio: ele usa o `WHATSAPP_TOKEN` da plataforma.
+- **`membros`**: quem pode ver cada negócio no painel (vem na próxima fase).
+
+Para cadastrar um cliente novo hoje: crie a linha em `negocios` pelo Table Editor do Supabase e rode
+`npm run conectar -- <slug> <phone_number_id> [token] [waba_id]`.
 
 ---
 
@@ -40,6 +53,7 @@ Abra `lib/negocios/elite-car.js` e `lib/negocios/givance.js` e troque tudo que e
 1. Crie um projeto em supabase.com.
 2. Vá em **SQL Editor**, cole o conteúdo de `supabase/schema.sql` e clique em **Run**.
 3. Em **Project Settings > API**, copie a `Project URL` e a chave `service_role` (a secreta, que **nunca** vai para o front-end).
+4. Com o `.env` preenchido (incluindo os `*_PHONE_NUMBER_ID`), rode `npm run semear` para cadastrar a Givance e a Elite Car e ligar os números delas.
 
 ### 3. OpenRouter (2 min)
 Crie a conta em openrouter.ai, coloque créditos (US$ 5 rende muita conversa no Haiku) e gere uma API key.
@@ -58,7 +72,7 @@ Para trocar de modelo, mude `OPENROUTER_MODEL` (ex.: `anthropic/claude-sonnet-4.
 ### 5. Deploy na Vercel
 1. Suba esta pasta para um repositório no GitHub.
 2. Na Vercel: *Add New > Project* > importe o repositório (não precisa de framework nem de build).
-3. Em *Settings > Environment Variables*, cadastre tudo que está em `.env.example`.
+3. Em *Settings > Environment Variables*, cadastre as variáveis de `.env.example` (as da seção "Só para npm run semear" não precisam ir para a Vercel).
 4. Faça o deploy. Seu webhook será `https://SEU-PROJETO.vercel.app/api/webhook`.
 
 ### 6. Ligar o webhook
@@ -90,7 +104,7 @@ Dica: use uma **mensagem pré-preenchida** no anúncio, como "Quero saber mais s
 Quando o agente transfere, ele **pausa sozinho naquele contato por 12h** (`HORAS_PAUSA`) e te avisa. Você tem dois caminhos:
 
 - **Coexistência (melhor)**: o mesmo número fica no app WhatsApp Business do celular **e** na API. A equipe responde pelo app como sempre, e o agente percebe e fica quieto. Para devolver a conversa ao agente, mande `#bot` naquela conversa (o cliente também vê essa mensagem, então você pode apagar para todos depois).
-- **Número separado**: o agente fica num número só dele e a equipe atende em outro. Preencha `GIVANCE_CONTATO_HUMANO` / `ELITE_CONTATO_HUMANO`: na transferência, o agente passa o link `wa.me/` da equipe para o cliente.
+- **Número separado**: o agente fica num número só dele e a equipe atende em outro. Preencha `contato_humano` do negócio na tabela `negocios`: na transferência, o agente passa o link `wa.me/` da equipe para o cliente.
 
 ## Ver os leads
 No Supabase, *Table Editor > leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
