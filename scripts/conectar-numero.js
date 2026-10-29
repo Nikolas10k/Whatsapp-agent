@@ -14,11 +14,11 @@ if (!slug || !phoneNumberId) {
 const env = process.env;
 const sb = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const { data: negocio, error } = await sb.from('negocios').select('id, nome').eq('slug', slug).maybeSingle();
+const { data: negocio, error } = await sb.from('agente_negocios').select('id, nome').eq('slug', slug).maybeSingle();
 if (error) throw error;
 if (!negocio) { console.error(`Negócio "${slug}" não existe`); process.exit(1); }
 
-const { error: e } = await sb.from('numeros_whatsapp').upsert({
+const { error: e } = await sb.from('agente_numeros').upsert({
   phone_number_id: phoneNumberId,
   negocio_id: negocio.id,
   access_token: token ? cifrar(token, env) : null,

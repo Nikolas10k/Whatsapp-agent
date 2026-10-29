@@ -28,18 +28,20 @@ Cliente ──► WhatsApp (Meta) ──► /api/webhook (Vercel) ──► Open
 | `lib/webhook.js` | Lê o JSON da Meta e descobre no banco de qual negócio é cada número |
 | `lib/cripto.js` | Cifra os tokens de WhatsApp dos clientes |
 | `api/webhook.js` | Endpoint que a Meta chama |
-| `supabase/schema.sql` | Tabelas `negocios`, `numeros_whatsapp`, `membros`, `mensagens` e `leads` |
+| `supabase/schema.sql` | Tabelas do agente (`agente_*`), no mesmo banco do Givance Publi |
+| `supabase/planos.sql` | Planos, assinaturas e uso do mês (`givance_*`) |
+| `public/` | Landing pages: `/` (Agente) e `/publi` (Publi) |
 | `scripts/semear.js` | Cadastra no banco os negócios das fichas acima (`npm run semear`) |
 | `scripts/conectar-numero.js` | Liga um número de WhatsApp a um negócio (`npm run conectar`) |
 | `test/` | Testes automáticos + bateria com a IA de verdade |
 
 ## Como funciona com vários clientes
 
-- **`negocios`**: um por cliente, com a ficha. `ativo = false` desliga o agente daquele cliente (ex.: assinatura vencida).
-- **`numeros_whatsapp`**: cada `phone_number_id` aponta para um negócio. Se o número é do cliente (WABA dele), o token dele fica aqui, cifrado com `TOKEN_KEY`. Se o número está na WABA da Givance, deixe o token vazio: ele usa o `WHATSAPP_TOKEN` da plataforma.
-- **`membros`**: quem pode ver cada negócio no painel (vem na próxima fase).
+- **`agente_negocios`**: um por cliente, com a ficha. `ativo = false` desliga o agente daquele cliente (ex.: assinatura vencida).
+- **`agente_numeros`**: cada `phone_number_id` aponta para um negócio. Se o número é do cliente (WABA dele), o token dele fica aqui, cifrado com `TOKEN_KEY`. Se o número está na WABA da Givance, deixe o token vazio: ele usa o `WHATSAPP_TOKEN` da plataforma.
+- **Acesso**: quem vê cada negócio no painel vem de `workspace_members` (o mesmo login do Givance Publi). Cada negócio pertence a um `workspace`.
 
-Para cadastrar um cliente novo hoje: crie a linha em `negocios` pelo Table Editor do Supabase e rode
+Para cadastrar um cliente novo hoje: crie a linha em `agente_negocios` pelo Table Editor do Supabase e rode
 `npm run conectar -- <slug> <phone_number_id> [token] [waba_id]`.
 
 ---
@@ -93,7 +95,7 @@ A Meta só deixa a empresa mandar mensagem livre para quem falou com ela nas úl
 Sem o template, o aviso só chega se você tiver mandado mensagem para o número do agente nas últimas 24h.
 
 ### 8. Anúncios (tráfego pago)
-No Gerenciador de Anúncios, crie campanhas com destino **WhatsApp** (Click-to-WhatsApp) apontando para o número certo de cada negócio. Nada mais precisa ser configurado: o agente lê o anúncio de origem automaticamente, salva em `leads.anuncio_titulo` / `anuncio_id` / `ctwa_clid` e já começa a conversa pelo assunto do anúncio.
+No Gerenciador de Anúncios, crie campanhas com destino **WhatsApp** (Click-to-WhatsApp) apontando para o número certo de cada negócio. Nada mais precisa ser configurado: o agente lê o anúncio de origem automaticamente, salva em `agente_leads.anuncio_titulo` / `anuncio_id` / `ctwa_clid` e já começa a conversa pelo assunto do anúncio.
 
 Dica: use uma **mensagem pré-preenchida** no anúncio, como "Quero saber mais sobre o site profissional". O primeiro contato fica bem mais fácil para o agente.
 
@@ -104,10 +106,10 @@ Dica: use uma **mensagem pré-preenchida** no anúncio, como "Quero saber mais s
 Quando o agente transfere, ele **pausa sozinho naquele contato por 12h** (`HORAS_PAUSA`) e te avisa. Você tem dois caminhos:
 
 - **Coexistência (melhor)**: o mesmo número fica no app WhatsApp Business do celular **e** na API. A equipe responde pelo app como sempre, e o agente percebe e fica quieto. Para devolver a conversa ao agente, mande `#bot` naquela conversa (o cliente também vê essa mensagem, então você pode apagar para todos depois).
-- **Número separado**: o agente fica num número só dele e a equipe atende em outro. Preencha `contato_humano` do negócio na tabela `negocios`: na transferência, o agente passa o link `wa.me/` da equipe para o cliente.
+- **Número separado**: o agente fica num número só dele e a equipe atende em outro. Preencha `contato_humano` do negócio na tabela `agente_negocios`: na transferência, o agente passa o link `wa.me/` da equipe para o cliente.
 
 ## Ver os leads
-No Supabase, *Table Editor > leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
+No Supabase, *Table Editor > agente_leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
 
 ## Testar antes de ligar
 ```bash

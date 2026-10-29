@@ -1,5 +1,5 @@
 import { waitUntil } from '@vercel/functions';
-import { assinaturaValida, criarWhatsapp } from '../lib/whatsapp.js';
+import { assinaturaValida, criarWhatsapp, iguaisSeguro } from '../lib/whatsapp.js';
 import { criarDb } from '../lib/db.js';
 import { chamarModelo } from '../lib/llm.js';
 import { extrairEventos, processarEventos } from '../lib/webhook.js';
@@ -8,7 +8,7 @@ import { extrairEventos, processarEventos } from '../lib/webhook.js';
 export function GET(request) {
   const url = new URL(request.url);
   const ok = url.searchParams.get('hub.mode') === 'subscribe'
-    && url.searchParams.get('hub.verify_token') === process.env.WHATSAPP_VERIFY_TOKEN;
+    && iguaisSeguro(url.searchParams.get('hub.verify_token'), process.env.WHATSAPP_VERIFY_TOKEN);
   return ok
     ? new Response(url.searchParams.get('hub.challenge'), { status: 200 })
     : new Response('Token inválido', { status: 403 });
@@ -16,6 +16,7 @@ export function GET(request) {
 
 // POST: cada mensagem nova chega aqui.
 export async function POST(request) {
+  if (!process.env.WHATSAPP_APP_SECRET) console.error('[webhook] WHATSAPP_APP_SECRET não configurado: recusando tudo');
   const bruto = await request.text();
   if (!assinaturaValida(bruto, request.headers.get('x-hub-signature-256'), process.env.WHATSAPP_APP_SECRET)) {
     return new Response('Assinatura inválida', { status: 401 });
