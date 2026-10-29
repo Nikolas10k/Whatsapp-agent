@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Painel · Givance Agente</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/painel/painel.css">
+</head>
+<body>
+  <!-- Carregando -->
+  <div id="tela-carregando" class="carregando" aria-busy="true"><span class="girando" aria-hidden="true"></span><span class="so-leitor">Carregando</span></div>
+
+  <!-- Login -->
+  <div id="tela-login" class="login" hidden>
+    <form id="form-login" class="login__cartao" novalidate>
+      <div class="marca"><span class="marca__icone" aria-hidden="true"></span><span>Givance Agente</span></div>
+      <h1>Entrar no painel</h1>
+      <p class="login__sub">Use o mesmo e-mail e senha do Givance Publi.</p>
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+      <p id="erro-login" class="erro" role="alert" hidden></p>
+      <button id="botao-entrar" class="botao botao--principal botao--largo" type="submit">Entrar</button>
+    </form>
+    <p class="login__rodape">Desenvolvido por <strong>Givance Tech</strong></p>
+  </div>
+
+  <!-- Conta sem agente -->
+  <div id="tela-sem-agente" class="login" hidden>
+    <div class="login__cartao">
+      <div class="marca"><span class="marca__icone" aria-hidden="true"></span><span>Givance Agente</span></div>
+      <h1>Seu agente ainda não foi configurado</h1>
+      <p class="login__sub">Sua conta está ativa, mas nenhum agente de WhatsApp está ligado a ela. Fale com a Givance Tech para configurar o seu.</p>
+      <a class="botao botao--principal botao--largo" href="https://wa.me/5561996747738?text=Quero%20configurar%20meu%20Givance%20Agente">Falar com a Givance Tech</a>
+      <button class="botao botao--contorno botao--largo js-sair" type="button">Sair</button>
+    </div>
+  </div>
+
+  <!-- Painel -->
+  <div id="tela-app" class="app" hidden>
+    <header class="barra">
+      <div class="marca"><span class="marca__icone" aria-hidden="true"></span><span class="marca__nome">Givance Agente</span></div>
+      <label for="seletor-negocio" class="so-leitor">Agente</label>
+      <select id="seletor-negocio" class="seletor" hidden></select>
+      <nav class="abas" role="tablist" aria-label="Seções do painel">
+        <button class="aba" role="tab" id="tab-conversas" aria-controls="aba-conversas" aria-selected="true" data-aba="conversas">Conversas</button>
+        <button class="aba" role="tab" id="tab-ficha" aria-controls="aba-ficha" aria-selected="false" data-aba="ficha" tabindex="-1">Ficha do agente</button>
+        <button class="aba" role="tab" id="tab-plano" aria-controls="aba-plano" aria-selected="false" data-aba="plano" tabindex="-1">Plano</button>
+      </nav>
+      <div class="barra__usuario">
+        <span id="usuario-email" class="barra__email"></span>
+        <button class="botao botao--fantasma js-sair" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Conversas -->
+      <section id="aba-conversas" class="conversas" role="tabpanel" aria-labelledby="tab-conversas">
+        <aside class="lista" aria-label="Leads">
+          <div class="lista__topo">
+            <label for="busca" class="so-leitor">Buscar leads</label>
+            <input id="busca" type="search" placeholder="Buscar por nome, número ou interesse" autocomplete="off">
+            <div class="filtros" role="group" aria-label="Filtrar leads">
+              <button class="filtro" data-filtro="todos" aria-pressed="true">Todos</button>
+              <button class="filtro" data-filtro="com_humano" aria-pressed="false">Com a equipe</button>
+              <button class="filtro" data-filtro="quente" aria-pressed="false">Quentes</button>
+              <button class="filtro" data-filtro="anuncio" aria-pressed="false">De anúncio</button>
+            </div>
+          </div>
+          <ul id="leads" class="leads"></ul>
+          <div id="leads-vazio" class="vazio" hidden></div>
+        </aside>
+
+        <section id="conversa" class="conversa" aria-label="Conversa">
+          <div id="conversa-vazia" class="vazio vazio--centro">
+            <strong>Escolha um lead</strong>
+            <span>A conversa completa com o agente aparece aqui.</span>
+          </div>
+          <div id="conversa-conteudo" class="conversa__conteudo" hidden>
+            <header class="conversa__topo">
+              <button id="voltar" class="botao botao--fantasma so-celular" type="button" aria-label="Voltar para a lista">←</button>
+              <div class="conversa__quem">
+                <h2 id="lead-nome"></h2>
+                <p id="lead-detalhes"></p>
+              </div>
+              <div class="conversa__acoes">
+                <span id="lead-situacao" class="selo"></span>
+                <button id="botao-assumir" class="botao botao--contorno" type="button"></button>
+                <label for="lead-status" class="so-leitor">Status do lead</label>
+                <select id="lead-status" class="seletor">
+                  <option value="novo">Novo</option>
+                  <option value="qualificado">Qualificado</option>
+                  <option value="com_humano">Com a equipe</option>
+                  <option value="fechado">Fechado</option>
+                  <option value="perdido">Perdido</option>
+                </select>
+              </div>
+            </header>
+            <div id="lead-faixa" class="faixa" hidden></div>
+            <ol id="mensagens" class="mensagens" aria-live="polite"></ol>
+            <form id="form-resposta" class="resposta">
+              <label for="texto-resposta" class="so-leitor">Responder como equipe</label>
+              <textarea id="texto-resposta" rows="2" maxlength="4000" placeholder="Responder como equipe… (Ctrl+Enter envia)"></textarea>
+              <button id="botao-enviar" class="botao botao--principal" type="submit">Enviar</button>
+            </form>
+            <p class="resposta__nota">Ao responder por aqui, o agente pausa nesta conversa até você devolver.</p>
+          </div>
+        </section>
+      </section>
+
+      <!-- Ficha -->
+      <section id="aba-ficha" class="pagina" role="tabpanel" aria-labelledby="tab-ficha" hidden>
+        <div class="pagina__cabecalho">
+          <h1>Ficha do agente</h1>
+          <p>Tudo o que o agente sabe sobre o seu negócio. Ele não inventa nada fora daqui: o que faltar, ele passa para a sua equipe.</p>
+        </div>
+        <form id="form-ficha" class="formulario">
+          <p id="ficha-somente-leitura" class="nota" hidden>Só o dono ou um administrador do workspace pode editar a ficha.</p>
+          <div class="campo-duplo">
+            <div>
+              <label for="f-nome-agente">Nome do atendente</label>
+              <input id="f-nome-agente" name="nome_agente" maxlength="60" required>
+              <small>Como o agente se apresenta. Ex.: Gi, Rafa, assistente da loja.</small>
+            </div>
+            <div>
+              <label for="f-dono">WhatsApp que recebe os avisos</label>
+              <input id="f-dono" name="dono_whatsapp" inputmode="numeric" maxlength="15" placeholder="5561999999999">
+              <small>Com DDI e DDD, só números. Recebe o aviso de lead quente.</small>
+            </div>
+          </div>
+          <label for="f-objetivo">Objetivo do atendimento</label>
+          <textarea id="f-objetivo" name="objetivo" rows="2" maxlength="600" required></textarea>
+          <small>Ex.: qualificar o lead e agendar uma visita na loja.</small>
+          <label for="f-ficha">Informações do negócio</label>
+          <textarea id="f-ficha" name="ficha" rows="16" maxlength="20000"></textarea>
+          <small>Serviços, preços, horários, endereço, formas de pagamento e regras. Use "(preencher)" no que ainda não sabe: o agente passa essas perguntas para a equipe.</small>
+          <label for="f-contato">WhatsApp da equipe (opcional)</label>
+          <input id="f-contato" name="contato_humano" inputmode="numeric" maxlength="15" placeholder="5561999999999">
+          <small>Só se a equipe atende em outro número. O agente passa esse contato ao transferir.</small>
+          <p id="erro-ficha" class="erro" role="alert" hidden></p>
+          <div class="formulario__acoes">
+            <button id="botao-salvar-ficha" class="botao botao--principal" type="submit">Salvar ficha</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Plano -->
+      <section id="aba-plano" class="pagina" role="tabpanel" aria-labelledby="tab-plano" hidden>
+        <div class="pagina__cabecalho">
+          <h1>Plano e uso</h1>
+          <p>Sua assinatura e quantos leads o agente já atendeu neste mês.</p>
+        </div>
+        <div id="plano"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <script src="/painel/vendor/supabase-2.118.0.js"></script>
+  <script src="/painel/config.js"></script>
+  <script src="/painel/painel.js" type="module"></script>
+</body>
+</html>

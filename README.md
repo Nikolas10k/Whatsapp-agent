@@ -120,8 +120,17 @@ O webhook `/api/asaas` confere cada pagamento na API do Asaas e atualiza `givanc
 Para vender hoje (sem painel): `npm run assinar -- <workspace_id> <plano_id> <email> <cpf_ou_cnpj> [preço_especial]` mostra o link da primeira fatura para mandar ao cliente.
 Para ligar o webhook no Asaas (uma vez por ambiente): `npm run asaas:webhook -- <seu_email>`.
 
+## Painel (`/painel`)
+Login com o mesmo e-mail e senha do Givance Publi (Supabase Auth). Cada pessoa vê só os agentes dos workspaces de que é membro.
+
+- **Conversas**: leads ordenados pela última mensagem, filtros (com a equipe, quentes, de anúncio), conversa completa, **assumir/devolver** ao agente, mudar status e **responder pelo painel** (pausa o agente naquele contato).
+- **Ficha do agente**: dono e administradores editam o que o agente sabe; vale na próxima mensagem.
+- **Plano**: assinatura, link da fatura em aberto e leads usados no mês.
+
+A leitura vai direto ao Supabase (protegida por RLS). Toda ação que muda dados passa por `/api/painel`, que confere o login e se a pessoa é membro do workspace. Responder só é permitido para quem já conversou com o agente.
+
 ## Ver os leads
-No Supabase, *Table Editor > agente_leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
+No painel (`/painel`) ou no Supabase, *Table Editor > agente_leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
 
 ## Testar antes de ligar
 ```bash
