@@ -85,6 +85,32 @@ test('registra lead e transfere para humano, pausando o agente', async () => {
   assert.equal(enviados.length, 1);
 });
 
+test('texto escrito junto com a ferramenta não se perde quando a rodada final vem vazia', async () => {
+  const { deps, enviados } = montar([
+    { content: 'Prazer, Vinicius! Que tipo de sistema você imagina?', tool_calls: [
+      { id: 't1', function: { name: 'registrar_lead', arguments: JSON.stringify({ nome: 'Vinicius', interesse: 'sistema' }) } },
+    ] },
+    { content: '' },
+  ]);
+  await receberMensagem(msg('w1', 'sou o Vinicius, quero um sistema'), deps);
+  assert.equal(enviados[0].texto, 'Prazer, Vinicius! Que tipo de sistema você imagina?');
+});
+
+test('se o modelo não escrever nada, pede de novo e nunca deixa o cliente sem resposta', async () => {
+  const comRetentativa = montar([
+    { content: '', tool_calls: [{ id: 't1', function: { name: 'registrar_lead', arguments: '{"interesse":"site"}' } }] },
+    { content: '' },
+    { content: 'Legal! Para qual negócio seria o site?' },
+  ]);
+  await receberMensagem(msg('w1', 'quero um site'), comRetentativa.deps);
+  assert.equal(comRetentativa.enviados[0].texto, 'Legal! Para qual negócio seria o site?');
+
+  const semNada = montar([{ content: '' }, { content: '' }]);
+  await receberMensagem(msg('w2', 'oi'), semNada.deps);
+  assert.equal(semNada.enviados.length, 1);
+  assert.ok(semNada.enviados[0].texto.length > 0);
+});
+
 test('guarda a origem do anúncio (Click-to-WhatsApp) e usa no prompt', async () => {
   const { deps, chamadasLlm } = montar([{ content: 'Oi!' }]);
   await receberMensagem(msg('w1', 'Olá! Quero mais informações', {
