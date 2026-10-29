@@ -159,6 +159,16 @@ p { margin: 0; }
 .rodape__links a:hover { color: var(--tinta); }
 .rodape__base { margin-top: 32px; font-size: 13px; color: var(--suave); }
 
+/* Páginas de texto (política de privacidade) */
+.documento { max-width: 760px; padding-top: 56px; }
+.documento h1 { font-size: clamp(30px, 4vw, 40px); }
+.documento h2 { font-size: 20px; margin: 40px 0 12px; scroll-margin-top: 90px; }
+.documento p, .documento li { font-size: 16px; color: var(--texto); }
+.documento p + p { margin-top: 12px; }
+.documento ul, .documento ol { padding-left: 22px; display: grid; gap: 8px; margin: 12px 0; }
+.documento a { color: var(--cor-forte); }
+.documento__data { color: var(--suave); margin-top: 8px; margin-bottom: 24px; }
+
 /* Maquete do WhatsApp (Agente) */
 .celular { width: 100%; max-width: 360px; margin-left: auto; border-radius: 36px; padding: 12px; background: #0f172a; box-shadow: 0 30px 60px -20px rgba(15, 23, 42, .45); }
 .celular__tela { border-radius: 26px; overflow: hidden; background: #efeae2; }
