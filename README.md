@@ -108,6 +108,18 @@ Quando o agente transfere, ele **pausa sozinho naquele contato por 12h** (`HORAS
 - **Coexistência (melhor)**: o mesmo número fica no app WhatsApp Business do celular **e** na API. A equipe responde pelo app como sempre, e o agente percebe e fica quieto. Para devolver a conversa ao agente, mande `#bot` naquela conversa (o cliente também vê essa mensagem, então você pode apagar para todos depois).
 - **Número separado**: o agente fica num número só dele e a equipe atende em outro. Preencha `contato_humano` do negócio na tabela `agente_negocios`: na transferência, o agente passa o link `wa.me/` da equipe para o cliente.
 
+## Cobrança (Asaas)
+Cada cliente tem uma assinatura mensal no Asaas. Todo mês o Asaas gera a fatura e o cliente paga por Pix, boleto ou cartão.
+O webhook `/api/asaas` confere cada pagamento na API do Asaas e atualiza `givance_assinaturas`:
+
+- **pago** → `ativa`, liberado até um mês depois do vencimento;
+- **vencido** → `atrasada`; o agente continua atendendo por mais 3 dias de carência e depois para;
+- **estornado** → corta na hora; **assinatura cancelada no Asaas** → `cancelada`;
+- **`cortesia`** nunca vence (Givance, Elite Car e parceiros).
+
+Para vender hoje (sem painel): `npm run assinar -- <workspace_id> <plano_id> <email> <cpf_ou_cnpj> [preço_especial]` mostra o link da primeira fatura para mandar ao cliente.
+Para ligar o webhook no Asaas (uma vez por ambiente): `npm run asaas:webhook -- <seu_email>`.
+
 ## Ver os leads
 No Supabase, *Table Editor > agente_leads*. Filtros úteis: `status = com_humano` (quem você precisa chamar) e `temperatura = quente`. A tabela pode alimentar o sistema de organização de leads da Givance.
 

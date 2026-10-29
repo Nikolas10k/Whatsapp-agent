@@ -1,5 +1,6 @@
 -- Planos e assinaturas da plataforma Givance (Publi + Agente). Rode depois do schema.sql.
--- A cobrança em si fica no Asaas; aqui fica o que cada workspace contratou e quanto já usou no mês.
+-- A cobrança em si fica no Asaas (webhook em api/asaas.js); aqui fica o que cada workspace
+-- contratou, até quando está pago e quanto já usou no mês.
 
 -- Catálogo de planos. Limite vazio (null) = o plano não inclui aquele produto.
 create table if not exists givance_planos (
@@ -30,12 +31,16 @@ create table if not exists givance_assinaturas (
   id                     uuid primary key default gen_random_uuid(),
   workspace_id           uuid not null references workspaces(id) on delete cascade,
   plano_id               text not null references givance_planos(id),
-  status                 text not null default 'teste' check (status in ('teste', 'ativa', 'atrasada', 'cancelada')),
+  -- aguardando: criada, primeira fatura ainda não paga | teste: período grátis | ativa: em dia
+  -- atrasada: fatura vencida (ainda funciona até periodo_fim + 3 dias) | cancelada | cortesia: nunca vence
+  status                 text not null default 'aguardando'
+                         check (status in ('aguardando', 'teste', 'ativa', 'atrasada', 'cancelada', 'cortesia')),
   preco_centavos         integer not null,       -- preço travado na contratação (ex.: preço de fundador)
   asaas_customer_id      text,
   asaas_subscription_id  text unique,
+  link_pagamento         text,                   -- fatura em aberto no Asaas (Pix, boleto ou cartão)
   periodo_inicio         timestamptz not null default now(),
-  periodo_fim            timestamptz,            -- fim do período pago (ou do teste)
+  periodo_fim            timestamptz,            -- até quando está pago (ou até quando vai o teste)
   criado_em              timestamptz not null default now(),
   atualizado_em          timestamptz not null default now()
 );
@@ -52,7 +57,7 @@ limites as (
          sum(p.limite_carrosseis) as limite_carrosseis,
          sum(p.limite_leads)      as limite_leads
   from givance_assinaturas a join givance_planos p on p.id = a.plano_id
-  where a.status in ('teste', 'ativa')
+  where a.status in ('teste', 'ativa', 'atrasada', 'cortesia')
   group by a.workspace_id
 )
 select w.id as workspace_id,

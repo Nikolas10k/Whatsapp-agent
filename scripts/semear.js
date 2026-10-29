@@ -30,5 +30,13 @@ for (const [slug, n] of Object.entries(negocios)) {
       .upsert({ phone_number_id: phoneNumberId, negocio_id: data.id }, { onConflict: 'phone_number_id' });
     if (e) throw e;
   }
-  console.log(`${n.nome}: ok${phoneNumberId ? ` (número ${phoneNumberId})` : ' (sem número: defina ' + p + '_PHONE_NUMBER_ID)'}`);
+
+  // Sem assinatura nenhuma o agente não atende: os primeiros clientes ganham cortesia
+  const { count } = await sb.from('givance_assinaturas').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
+  if (!count) {
+    const { error: e } = await sb.from('givance_assinaturas')
+      .insert({ workspace_id: workspaceId, plano_id: 'agente_pro', status: 'cortesia', preco_centavos: 0 });
+    if (e) throw e;
+  }
+  console.log(`${n.nome}: ok${phoneNumberId ? ` (número ${phoneNumberId})` : ' (sem número: defina ' + p + '_PHONE_NUMBER_ID)'}${count ? '' : ' · cortesia criada'}`);
 }

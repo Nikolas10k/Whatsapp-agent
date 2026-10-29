@@ -9,7 +9,9 @@
     "test": "node --test test/*.test.js",
     "bateria": "node test/bateria-real.js",
     "semear": "node --env-file=.env scripts/semear.js",
-    "conectar": "node --env-file=.env scripts/conectar-numero.js"
+    "conectar": "node --env-file=.env scripts/conectar-numero.js",
+    "assinar": "node --env-file=.env scripts/assinar.js",
+    "asaas:webhook": "node --env-file=.env scripts/configurar-asaas.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
