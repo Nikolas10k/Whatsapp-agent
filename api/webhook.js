@@ -29,6 +29,9 @@ export async function POST(request) {
   try { corpo = JSON.parse(bruto); } catch { return new Response('JSON inválido', { status: 400 }); }
 
   const eventos = extrairEventos(corpo);
+  // Só o resumo, sem conteúdo de mensagem: ajuda a diagnosticar sem expor conversas
+  const campos = (corpo.entry ?? []).flatMap((e) => (e.changes ?? []).map((c) => c.field));
+  console.log(`[webhook] recebido: campos=${campos.join(',') || '-'} eventos=${eventos.length}`);
   if (eventos.length) {
     const deps = {
       db: criarDb(),
