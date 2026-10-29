@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { receberMensagem, receberEcoDaEquipe } from '../lib/agente.js';
+import { receberMensagem, receberEcoDaEquipe, prometeuEquipe } from '../lib/agente.js';
 import { criarDbMemoria } from '../lib/db-memoria.js';
 import { extrairEventos, processarEventos } from '../lib/webhook.js';
 import { assinaturaValida } from '../lib/whatsapp.js';
@@ -109,6 +109,45 @@ test('se o modelo não escrever nada, pede de novo e nunca deixa o cliente sem r
   await receberMensagem(msg('w2', 'oi'), semNada.deps);
   assert.equal(semNada.enviados.length, 1);
   assert.ok(semNada.enviados[0].texto.length > 0);
+});
+
+test('agente que promete chamar a equipe sem transferir é transferido pelo sistema (avisa o dono e pausa)', async () => {
+  const { deps, avisos } = montar([
+    { content: 'Perfeito, Zumberto! Vou conectar você com o Nikolas. Alguém da equipe vai responder por aqui em breve!' },
+  ]);
+  await receberMensagem(msg('w1', 'quero pra ontem'), deps);
+  const lead = await deps.db.obterLead('givance', '5561988887777');
+  assert.equal(lead.status, 'com_humano');
+  assert.ok(new Date(lead.bot_pausado_ate) > new Date());
+  assert.equal(avisos.length, 1);
+  assert.match(avisos[0].resumo, /Transferência automática/);
+});
+
+test('lead marcado como quente sem transferir também vai para a equipe', async () => {
+  const { deps, avisos } = montar([
+    { content: '', tool_calls: [{ id: 't1', function: { name: 'registrar_lead', arguments: JSON.stringify({ nome: 'Ana', interesse: 'site', temperatura: 'quente' }) } }] },
+    { content: 'Que ótimo, Ana! Para quando você precisa?' },
+  ]);
+  await receberMensagem(msg('w1', 'quero fechar um site'), deps);
+  assert.equal((await deps.db.obterLead('givance', '5561988887777')).status, 'com_humano');
+  assert.match(avisos[0].resumo, /\[quer_fechar\] Ana — site/);
+});
+
+test('quando a IA transfere direito, não transfere de novo', async () => {
+  const { deps, avisos } = montar([
+    { content: '', tool_calls: [{ id: 't1', function: { name: 'transferir_para_humano', arguments: JSON.stringify({ motivo: 'orcamento', resumo: 'quer orçamento' }) } }] },
+    { content: 'Alguém da equipe vai responder por aqui em breve!' },
+  ]);
+  await receberMensagem(msg('w1', 'quero orçamento'), deps);
+  assert.equal(avisos.length, 1);
+});
+
+test('prometeuEquipe reconhece promessas e ignora conversa normal', () => {
+  assert.equal(prometeuEquipe('Vou conectar você com o Nikolas, nosso especialista.'), true);
+  assert.equal(prometeuEquipe('Alguém da equipe vai responder por aqui em breve!'), true);
+  assert.equal(prometeuEquipe('Nosso especialista vai te chamar ainda hoje.'), true);
+  assert.equal(prometeuEquipe('Nossa equipe faz sites e sistemas. Qual é o seu negócio?'), false);
+  assert.equal(prometeuEquipe('Oi! Tudo bem? Como posso te ajudar?'), false);
 });
 
 test('guarda a origem do anúncio (Click-to-WhatsApp) e usa no prompt', async () => {
