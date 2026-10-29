@@ -13,8 +13,12 @@ export async function POST(request) {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!token) return json({ erro: 'Faça login de novo' }, 401);
 
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[painel] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados');
+    return json({ erro: 'O painel ainda está sendo configurado. Tente de novo mais tarde.' }, 503);
+  }
   const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-  const { data, error } = await admin.auth.getUser(token);
+  const { data, error } = await admin.auth.getUser(token).catch((e) => ({ error: e }));
   if (error || !data?.user) return json({ erro: 'Faça login de novo' }, 401);
 
   const bruto = await request.text();
