@@ -18,7 +18,10 @@ export function GET(request) {
 export async function POST(request) {
   if (!process.env.WHATSAPP_APP_SECRET) console.error('[webhook] WHATSAPP_APP_SECRET não configurado: recusando tudo');
   const bruto = await request.text();
-  if (!assinaturaValida(bruto, request.headers.get('x-hub-signature-256'), process.env.WHATSAPP_APP_SECRET)) {
+  const assinatura = request.headers.get('x-hub-signature-256');
+  if (!assinaturaValida(bruto, assinatura, process.env.WHATSAPP_APP_SECRET)) {
+    // Com assinatura e não bate: quase sempre é WHATSAPP_APP_SECRET de outro app da Meta
+    console.warn(`[webhook] assinatura recusada (${assinatura ? 'não confere com WHATSAPP_APP_SECRET' : 'sem cabeçalho'})`);
     return new Response('Assinatura inválida', { status: 401 });
   }
 
